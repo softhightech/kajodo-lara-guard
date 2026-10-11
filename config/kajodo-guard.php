@@ -63,6 +63,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Signed-in users
+    |--------------------------------------------------------------------------
+    |
+    | true (default) = only guests are gated. They already authenticated,
+    | and gating everyone locks an admin out the moment they browse from a
+    | VPN or datacenter network.
+    |
+    | false = gate every request, signed in or not.
+    |
+    */
+
+    'skip_authenticated' => env('KAJODO_SKIP_AUTHENTICATED', true),
+
+    /*
+    |--------------------------------------------------------------------------
     | Paths that bypass the check (webhooks, health checks, ...).
     |--------------------------------------------------------------------------
     */

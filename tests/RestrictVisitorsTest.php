@@ -2,6 +2,7 @@
 
 namespace Kajodo\Guard\Tests;
 
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 
@@ -53,5 +54,48 @@ class RestrictVisitorsTest extends TestCase
         Http::preventStrayRequests();
 
         $this->get('/health')->assertOk();
+    }
+
+    /**
+     * Minimal authenticatable user for the signed-in cases below.
+     */
+    protected function userStub(): Authenticatable
+    {
+        return new class extends Authenticatable
+        {
+            protected $table = 'users';
+        };
+    }
+
+    public function test_signed_in_users_are_not_gated_by_default(): void
+    {
+        config()->set('kajodo-guard.skip_authenticated', true);
+
+        Http::fake([
+            '*' => Http::response(['data' => [
+                'ip' => '127.0.0.1',
+                'access' => ['decision' => 'deny', 'reason' => 'Country XX is not on the allowed list.'],
+            ]], 200),
+        ]);
+
+        $this->actingAs($this->userStub());
+
+        $this->get('/protected')->assertOk();
+    }
+
+    public function test_signed_in_users_are_gated_when_configured(): void
+    {
+        config()->set('kajodo-guard.skip_authenticated', false);
+
+        Http::fake([
+            '*' => Http::response(['data' => [
+                'ip' => '127.0.0.1',
+                'access' => ['decision' => 'deny', 'reason' => 'Country XX is not on the allowed list.'],
+            ]], 200),
+        ]);
+
+        $this->actingAs($this->userStub());
+
+        $this->get('/protected')->assertForbidden();
     }
 }

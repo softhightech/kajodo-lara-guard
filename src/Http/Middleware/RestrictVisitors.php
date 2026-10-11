@@ -22,6 +22,14 @@ class RestrictVisitors
             }
         }
 
+        // Signed-in users are admitted by default. They already proved
+        // themselves with credentials, and checking them means one admin
+        // on a VPN or datacenter network locks themselves out of their
+        // own site. Set to false to gate everyone.
+        if ((bool) config('kajodo-guard.skip_authenticated', true) && $request->user() !== null) {
+            return $next($request);
+        }
+
         $ip = $request->ip() ?? '';
 
         if ($this->guard->isAllowed($ip)) {
