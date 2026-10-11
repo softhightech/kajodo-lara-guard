@@ -107,6 +107,30 @@ class KajodoVisitorStorageTest extends TestCase
         $this->assertDatabaseCount('kajodo_visitors', 0);
     }
 
+    public function test_failed_store_write_does_not_poison_the_cache(): void
+    {
+        config()->set('kajodo-guard.cache_enabled', true);
+        config()->set('kajodo-guard.cache_store', 'array');
+        // Point the store at a table that does not exist: the write throws.
+        config()->set('kajodo-guard.table', 'kajodo_visitors_missing');
+
+        Http::fake([
+            '*' => Http::response(['data' => [
+                'ip' => '2.3.0.42',
+                'access' => ['decision' => 'allow', 'reason' => 'ok'],
+            ]], 200),
+        ]);
+
+        $guard = $this->app->make(GuardService::class);
+
+        $this->assertTrue($guard->isAllowed('2.3.0.42'));
+
+        // A cached decision would short-circuit every later request before
+        // it reaches the table, leaving the visitor unrecorded until the
+        // cache expired — so nothing may be cached here.
+        $this->assertNull($this->app['cache']->store('array')->get($guard->cacheKey('2.3.0.42')));
+    }
+
     public function test_invalid_ip_is_not_stored(): void
     {
         Http::preventStrayRequests();

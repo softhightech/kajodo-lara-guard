@@ -2,12 +2,19 @@
 
 namespace Kajodo\Guard\Tests;
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Kajodo\Guard\Facades\KajodoGuard;
 use Kajodo\Guard\KajodoGuard as GuardService;
 
 class KajodoGuardTest extends TestCase
 {
+    use RefreshDatabase;
+
+    protected function defineDatabaseMigrations(): void
+    {
+        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+    }
     public function test_allow_when_kajodo_decision_is_allow(): void
     {
         Http::fake([

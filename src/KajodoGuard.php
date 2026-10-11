@@ -52,7 +52,14 @@ class KajodoGuard
             return $result;
         }
 
-        $this->storeResult($result);
+        // Only cache when the row is actually persisted. Caching a result
+        // whose store write failed would short-circuit every later request
+        // before it reaches the table, leaving the visitor unrecorded
+        // until the cache expired.
+        if (! $this->storeResult($result)) {
+            return $result;
+        }
+
         $this->rememberInCache($result);
 
         return $result;
@@ -102,10 +109,14 @@ class KajodoGuard
         }
     }
 
-    protected function storeResult(LookupResult $result): void
+    /**
+     * Persist the visitor. Returns false when the write failed, so the
+     * caller knows not to cache a decision the table never received.
+     */
+    protected function storeResult(LookupResult $result): bool
     {
         if (! $this->storeEnabled) {
-            return;
+            return true;
         }
 
         try {
@@ -113,11 +124,15 @@ class KajodoGuard
                 ['ip' => $result->ip],
                 $result->toStoreAttributes(),
             );
+
+            return true;
         } catch (Throwable $e) {
             Log::warning('Kajodo visitor store write failed.', [
                 'ip' => $result->ip,
                 'error' => $e->getMessage(),
             ]);
+
+            return false;
         }
     }
 
